@@ -1,58 +1,47 @@
-// pages/_app.tsx  (Next.js pages router, TypeScript)
-import type { AppProps } from 'next/app';
-import { WagmiProvider, createConfig } from 'wagmi';
-import { metaMask } from '@wagmi/connectors';
+// pages/_app.tsx
+import type { AppProps } from 'next/app'
 import {
-  configureChains,
-  publicProvider,
-  jsonRpcProvider,
-} from '@wagmi/core/providers';
-import { Web3Modal } from '@web3modal/ethers/react';
-import { ReactNode } from 'react';
+  WagmiProvider,                  // React context provider
+  createConfig,
+  http
+} from 'wagmi'
+import { injected } from 'wagmi/connectors'
+import { createWeb3Modal } from '@web3modal/wagmi/react'   // v3 helper
+// import '@/styles.css'
 
-/* ------------------------------------------------------------------
-   1.  Declare the Monad chain object – use the *same* chainId & RPC
-       that you passed to Foundry (`MONAD_RPC`) and to ethr-did-resolver
-   ------------------------------------------------------------------ */
-const monad = {
-  id: 1234,                                   // replace if Monad finalises id
+/* ---------- your custom Monad chain object ---------- */
+export const monad = {
+  id: 10143,
   name: 'Monad Testnet',
-  nativeCurrency: { name: 'MONAD', symbol: 'MONAD', decimals: 18 },
-  rpcUrls: { default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC!] } },
-  blockExplorers: {
-    default: { name: 'MonadScan', url: 'https://explorer.monad.xyz' },
-  },
-} as const;
+  nativeCurrency: { name: 'Monad Testnet', symbol: 'MON', decimals: 18 },
+  rpcUrls: { default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC as string] } },
+} as const
 
-/* ------------------------------------------------------------------
-   2.  Configure wagmi  (connectors, provider, public client)
-   ------------------------------------------------------------------ */
-const { publicClient, chains } = configureChains(
-  [monad],
-  [
-    jsonRpcProvider({
-      rpc: () => ({ http: process.env.NEXT_PUBLIC_MONAD_RPC! }),
-    }),
-    publicProvider(),
+/* ---------- wagmi v2 config ---------- */
+export const wagmiConfig = createConfig({
+  chains: [monad],
+  connectors: [
+    injected({            // MetaMask & other injected wallets
+      target: 'metaMask'  // treat specifically as MetaMask
+    })
   ],
-);
+  transports: {
+    [monad.id]: http(process.env.NEXT_PUBLIC_MONAD_RPC!)
+  }
+})
 
-const wagmiConfig = createConfig({
-  connectors: [metaMask()],
-  autoConnect: true,
-  publicClient,
-});
+/* ---------- Web3Modal (WalletConnect v2) ---------- */
+createWeb3Modal({
+  wagmiConfig,
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,   // get one free at cloud.walletconnect.com
+  // chains: [monad]
+})
 
-/* ------------------------------------------------------------------
-   3.  Custom App component that wraps every page
-   ------------------------------------------------------------------ */
-export default function MyApp({ Component, pageProps }: AppProps) {
+export default function MyApp ({ Component, pageProps }: AppProps) {
   return (
     <WagmiProvider config={wagmiConfig}>
-      {/* Optional:  <Web3Modal /> renders the connect button’s modals */}
-      <Web3Modal />
-      {/* All Next pages render below */}
+      {/* <w3m-button /> web-component works anywhere now */}
       <Component {...pageProps} />
     </WagmiProvider>
-  );
+  )
 }
