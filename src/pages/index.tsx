@@ -6,7 +6,7 @@ export default function Home() {
     <main className={styles.wrapper}>
       {/* -------- Intro ---------------------------------- */}
       <section>
-        <h1 className={styles.h1}>Monad VC Demo</h1>
+        <h1 className={styles.h1}>Verifiable Credentials Demo</h1>
         <p>
           Issue and&nbsp;✅ verify W3C&nbsp;Verifiable Credentials on the
           <em> Monad</em> chain. Credentials are:
