@@ -1,59 +1,111 @@
 'use client';
+
 import { useAccount } from 'wagmi';
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
+import styles from '@/styles/Page.module.css';
+
+const ConnectBtn = dynamic(() => import('@/components/ConnectBtn'), { ssr: false });
 
 export default function IssuerClient() {
   const { address } = useAccount();
   const [form, setForm] = useState({ skill: '', level: 'Expert', score: 100 });
   const [jwt, setJwt]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied]   = useState(false);
 
   async function handleGenerate() {
-    const res = await fetch('/api/issue', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ holder: address, ...form })
-    });
-    const { jwt } = await res.json();
-    setJwt(jwt);
+    setLoading(true);
+    setCopied(false);
+    try {
+      const res = await fetch('/api/issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ holder: address, ...form })
+      });
+      const { jwt } = await res.json();
+      setJwt(jwt);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  /* ─── UI ─── */
+  async function copyToClipboard() {
+    await navigator.clipboard.writeText(jwt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   if (!address) {
     return (
-      <main className="p-10 flex justify-center">
-        {/* @ts-expect-error: Property 'w3m-button' does not exist on type 'JSX.IntrinsicElements'. */}
-        <w3m-button />
+      <main className={styles.wrapper}>
+        <ConnectBtn />
       </main>
     );
   }
 
   return (
-    <main className="p-10 max-w-xl mx-auto">
-      <h1 className="text-xl font-bold mb-4">Issue Credential</h1>
+    <main className={styles.wrapper}>
+      <h1 className={styles.h1}>Issue Credential</h1>
 
-      <input
-        className="border p-2 w-full mb-2"
-        placeholder="Skill"
-        value={form.skill}
-        onChange={(e) => setForm({ ...form, skill: e.target.value })}
-      />
+      <label className={styles.label}>
+        Skill
+        <input
+          className={styles.input}
+          value={form.skill}
+          onChange={(e) => setForm({ ...form, skill: e.target.value })}
+        />
+      </label>
+
+      <label className={styles.label}>
+        Level
+        <select
+          className={styles.input}
+          value={form.level}
+          onChange={(e) => setForm({ ...form, level: e.target.value })}
+        >
+          <option>Beginner</option>
+          <option>Intermediate</option>
+          <option>Advanced</option>
+          <option>Expert</option>
+        </select>
+      </label>
+
+      <label className={styles.label}>
+        Score
+        <input
+          type="number"
+          min={0}
+          max={100}
+          className={styles.input}
+          value={form.score}
+          onChange={(e) => setForm({ ...form, score: Number(e.target.value) })}
+        />
+      </label>
 
       <button
-        className="bg-blue-600 text-white px-4 py-2 rounded"
+        className={styles.btnPrimary}
         onClick={handleGenerate}
+        disabled={loading}
       >
-        Generate VC
+        {loading ? <span className={styles.spinner} /> : 'Generate VC ➡'}
       </button>
 
       {jwt && (
         <>
-          <h2 className="mt-6 font-bold">Your VC (JWT)</h2>
-          <textarea
-            readOnly
-            rows={8}
-            value={jwt}
-            className="w-full border p-2"
-          />
+          <h2 className={styles.h2}>Issued VC (JWT)</h2>
+
+          <div className={styles.copyRow}>
+            <textarea
+              readOnly
+              rows={8}
+              className={styles.textarea}
+              value={jwt}
+            />
+            <button className={styles.btnSecondary} onClick={copyToClipboard}>
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
         </>
       )}
     </main>
